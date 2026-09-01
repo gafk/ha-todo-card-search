@@ -325,8 +325,8 @@ class TodoListSearchCard extends HTMLElement {
           background: var(--card-background-color, #fff);
           color: var(--primary-text-color, #000);
           border-radius: 999px;
-          padding: 4px 12px;
-          font-size: 0.8em;
+          padding: 6px 14px;
+          font-size: 1em;
           font-family: inherit;
           cursor: pointer;
         }
@@ -423,6 +423,12 @@ class TodoListSearchCard extends HTMLElement {
         this._updateList();
         return;
       }
+      if (target.hasAttribute("data-room-reset")) {
+        this._selectedRoomCode = null;
+        this._renderRoomFilter();
+        this._updateList();
+        return;
+      }
       if (target.dataset.floor !== undefined) {
         this._selectedFloor = this._selectedFloor === target.dataset.floor ? null : target.dataset.floor;
         this._selectedRoomCode = null;
@@ -479,7 +485,14 @@ class TodoListSearchCard extends HTMLElement {
         <button type="button" class="chip${!this._selectedFloor ? " active" : ""}" data-floor-reset>Alle</button>
         ${floorChips}
       </div>
-      ${currentFloor ? `<div class="chip-row">${roomChips}</div>` : ""}
+      ${
+        currentFloor
+          ? `<div class="chip-row">
+              <button type="button" class="chip${!this._selectedRoomCode ? " active" : ""}" data-room-reset>Alle</button>
+              ${roomChips}
+            </div>`
+          : ""
+      }
     `;
   }
 
