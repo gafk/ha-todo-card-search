@@ -29,6 +29,21 @@
  *  - prefix_color        Farbe für das 2-Buchstaben-Raumkürzel am Anfang
  *                         jedes Titels (z.B. "WZ Staubsaugen"), Standard
  *                         Amber (#ffab00)
+ *  - floors             Optional, nur per YAML (kein Feld im visuellen
+ *                        Editor): Etagen/Raum-Filter als klickbare Chips
+ *                        oberhalb der Liste, z.B.:
+ *                          floors:
+ *                            - floor: "EG"
+ *                              rooms:
+ *                                - { code: "WZ", label: "Wohnzimmer" }
+ *                                - { code: "KU", label: "Küche" }
+ *                            - floor: "OG"
+ *                              rooms:
+ *                                - { code: "SZ", label: "Schlafzimmer" }
+ *                        Klick auf eine Etage filtert auf alle ihre
+ *                        Räume, Klick auf einen Raum-Chip auf genau
+ *                        diesen. Wird mit der Freitextsuche kombiniert
+ *                        (beides muss zutreffen).
  *
  * Einschränkungen (bewusst minimal gehalten):
  *  - Kein Eingabefeld zum Hinzufügen neuer Aufgaben – dafür weiterhin
@@ -61,6 +76,8 @@ class TodoListSearchCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._items = [];
     this._filter = "";
+    this._selectedFloor = null;
+    this._selectedRoomCode = null;
     this._showCompleted = false;
     this._unsubPromise = null;
     this._shellBuilt = false;
@@ -75,6 +92,7 @@ class TodoListSearchCard extends HTMLElement {
       hide_completed: false,
       search_placeholder: "Suchen…",
       prefix_color: "#ffab00",
+      floors: [],
       ...config,
     };
   }
@@ -154,12 +172,35 @@ class TodoListSearchCard extends HTMLElement {
   }
 
   _matchesFilter(item) {
+    return this._matchesTextFilter(item) && this._matchesRoomFilter(item);
+  }
+
+  _matchesTextFilter(item) {
     if (!this._filter) return true;
     const q = this._filter.toLowerCase();
     return (
       (item.summary || "").toLowerCase().includes(q) ||
       (item.description || "").toLowerCase().includes(q)
     );
+  }
+
+  // null = kein Etagen-/Raum-Filter aktiv. Sonst die Liste der Raum-
+  // Kürzel, die aktuell durchgelassen werden (ein einzelnes bei
+  // gewähltem Raum, alle Räume der Etage bei nur gewählter Etage).
+  _activeRoomCodes() {
+    if (this._selectedRoomCode) return [this._selectedRoomCode];
+    if (this._selectedFloor) {
+      const floor = (this._config.floors || []).find((f) => f.floor === this._selectedFloor);
+      return floor ? (floor.rooms || []).map((r) => r.code) : [];
+    }
+    return null;
+  }
+
+  _matchesRoomFilter(item) {
+    const codes = this._activeRoomCodes();
+    if (!codes) return true;
+    const { prefix } = this._splitPrefix(item.summary);
+    return !!prefix && codes.includes(prefix);
   }
 
   _toggle(item) {
@@ -265,6 +306,27 @@ class TodoListSearchCard extends HTMLElement {
           --mdc-icon-size: 20px;
           flex-shrink: 0;
         }
+        .chip-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          padding: 0 16px 8px;
+        }
+        .chip {
+          border: 1px solid var(--divider-color, #ccc);
+          background: var(--card-background-color, #fff);
+          color: var(--primary-text-color, #000);
+          border-radius: 999px;
+          padding: 4px 12px;
+          font-size: 0.8em;
+          font-family: inherit;
+          cursor: pointer;
+        }
+        .chip.active {
+          background: var(--todo-search-prefix-color, ${this._config.prefix_color});
+          border-color: var(--todo-search-prefix-color, ${this._config.prefix_color});
+          color: #fff;
+        }
         .section-title {
           padding: 4px 16px;
           font-size: 0.85em;
@@ -311,6 +373,7 @@ class TodoListSearchCard extends HTMLElement {
           <ha-icon icon="mdi:magnify"></ha-icon>
           <input id="search" type="text" placeholder="${this._escape(this._config.search_placeholder)}" />
         </div>
+        <div id="room-filter"></div>
         <div id="active-section"></div>
         <div id="completed-section"></div>
       </ha-card>
@@ -337,13 +400,79 @@ class TodoListSearchCard extends HTMLElement {
       if (item) this._toggle(item);
     });
     this.shadowRoot.addEventListener("click", (e) => {
-      const toggle = e.target.closest && e.target.closest("#toggle-completed");
-      if (!toggle) return;
-      this._showCompleted = !this._showCompleted;
-      this._updateList();
+      const target = e.target.closest && e.target.closest("button, [id]");
+      if (!target) return;
+
+      if (target.id === "toggle-completed") {
+        this._showCompleted = !this._showCompleted;
+        this._updateList();
+        return;
+      }
+      if (target.hasAttribute("data-floor-reset")) {
+        this._selectedFloor = null;
+        this._selectedRoomCode = null;
+        this._renderRoomFilter();
+        this._updateList();
+        return;
+      }
+      if (target.dataset.floor !== undefined) {
+        this._selectedFloor = this._selectedFloor === target.dataset.floor ? null : target.dataset.floor;
+        this._selectedRoomCode = null;
+        this._renderRoomFilter();
+        this._updateList();
+        return;
+      }
+      if (target.dataset.room !== undefined) {
+        this._selectedRoomCode = this._selectedRoomCode === target.dataset.room ? null : target.dataset.room;
+        this._renderRoomFilter();
+        this._updateList();
+      }
     });
 
+    this._renderRoomFilter();
     this._shellBuilt = true;
+  }
+
+  /**
+   * Baut die Etagen-/Raum-Filter-Chips auf. Getrennt von _updateList(),
+   * da sie nur bei Auswahl-Änderungen (Klick) neu gerendert werden
+   * müssen, nicht bei jedem Tastendruck im Suchfeld oder bei
+   * Live-Updates der Aufgabenliste.
+   */
+  _renderRoomFilter() {
+    const container = this.shadowRoot.getElementById("room-filter");
+    if (!container) return;
+
+    const floors = this._config.floors || [];
+    if (!floors.length) {
+      container.innerHTML = "";
+      return;
+    }
+
+    const floorChips = floors
+      .map((f) => {
+        const active = this._selectedFloor === f.floor;
+        return `<button type="button" class="chip${active ? " active" : ""}" data-floor="${this._escape(f.floor)}">${this._escape(f.floor)}</button>`;
+      })
+      .join("");
+
+    const currentFloor = floors.find((f) => f.floor === this._selectedFloor);
+    const roomChips = currentFloor
+      ? (currentFloor.rooms || [])
+          .map((r) => {
+            const active = this._selectedRoomCode === r.code;
+            return `<button type="button" class="chip${active ? " active" : ""}" data-room="${this._escape(r.code)}">${this._escape(r.label || r.code)}</button>`;
+          })
+          .join("")
+      : "";
+
+    container.innerHTML = `
+      <div class="chip-row">
+        <button type="button" class="chip${!this._selectedFloor ? " active" : ""}" data-floor-reset>Alle</button>
+        ${floorChips}
+      </div>
+      ${currentFloor ? `<div class="chip-row">${roomChips}</div>` : ""}
+    `;
   }
 
   /**
@@ -358,6 +487,7 @@ class TodoListSearchCard extends HTMLElement {
     const filtered = this._items.filter((i) => this._matchesFilter(i));
     const active = this._sort(filtered.filter((i) => i.status !== "completed"));
     const completed = this._sort(filtered.filter((i) => i.status === "completed"));
+    const hasActiveFilter = !!this._filter || !!this._activeRoomCodes();
 
     const activeSection = this.shadowRoot.getElementById("active-section");
     if (activeSection) {
@@ -365,7 +495,7 @@ class TodoListSearchCard extends HTMLElement {
         <ul id="active">${active.map((i) => this._itemHtml(i)).join("")}</ul>
         ${
           active.length === 0
-            ? `<div class="empty">Keine Aufgaben${this._filter ? " für diese Suche" : ""}.</div>`
+            ? `<div class="empty">Keine Aufgaben${hasActiveFilter ? " für diese Auswahl" : ""}.</div>`
             : ""
         }
       `;

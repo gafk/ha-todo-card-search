@@ -10,6 +10,7 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
 - Sortierung nach Name oder Fälligkeitsdatum
 - Relative Fälligkeitsanzeige (Heute / Morgen / In 3 Tagen / Vor 2 Tagen …)
 - Farbige 2-Buchstaben-Raum-Präfixe (z.B. `WZ`, `KU`, `BA`)
+- Etagen-/Raum-Filter als Chips (Etage wählen → zugehörige Räume, optional weiter eingrenzen)
 - Abschnitt „Erledigt" ein-/ausklappbar
 - Visueller Karten-Editor (GUI) zusätzlich zu YAML
 - Vanilla JavaScript – kein Build-Schritt erforderlich
@@ -54,6 +55,7 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
 | `hide_completed`     | boolean | ❌       | `false`       | Erledigte Aufgaben dauerhaft ausblenden                          |
 | `search_placeholder` | string  | ❌       | `Suchen…`     | Platzhaltertext im Suchfeld                                      |
 | `prefix_color`       | string  | ❌       | `#ffab00`     | Farbe für Raum-Präfixe (CSS-Farbe oder HA-Variable)              |
+| `floors`             | list    | ❌       | `[]`          | Etagen-/Raum-Filter, siehe [Etagen- und Raum-Filter](#etagen--und-raum-filter). Nur per YAML, kein Feld im visuellen Editor |
 
 ### Beispiel
 
@@ -68,6 +70,31 @@ prefix_color: "#ffab00"
 ## Raum-Präfixe
 
 Aufgaben, die mit einem 2-Buchstaben-Kürzel beginnen (z.B. `WZ Staubsaugen`, `KU Abwischen`), werden automatisch erkannt: Das Kürzel wird farbig hervorgehoben, der Rest normal angezeigt.
+
+## Etagen- und Raum-Filter
+
+Optional lässt sich oberhalb der Liste ein Chip-Filter für Etagen und Räume einblenden – praktisch, wenn es viele Räume gibt und Tippen des Präfixes umständlich wäre:
+
+```yaml
+type: custom:ha-todo-card-search
+entity: todo.putzplan
+floors:
+  - floor: "EG"
+    rooms:
+      - { code: "WZ", label: "Wohnzimmer" }
+      - { code: "KU", label: "Küche" }
+  - floor: "OG"
+    rooms:
+      - { code: "SZ", label: "Schlafzimmer" }
+      - { code: "KZ", label: "Kinderzimmer" }
+```
+
+- Klick auf eine Etage filtert auf alle ihre Räume und blendet darunter die Raum-Chips dieser Etage ein.
+- Klick auf einen Raum-Chip grenzt weiter auf genau diesen Raum ein; erneuter Klick springt zurück auf die ganze Etage.
+- „Alle" setzt den Filter zurück.
+- Wird mit der Freitextsuche kombiniert (beide Bedingungen müssen zutreffen).
+- Aufgaben ohne erkanntes Raum-Präfix werden ausgeblendet, sobald ein Etagen- oder Raum-Filter aktiv ist.
+- Ohne `floors`-Konfiguration bleibt die Karte unverändert (kein Filter-Chip wird angezeigt).
 
 ## Einschränkungen
 
