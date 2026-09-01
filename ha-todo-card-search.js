@@ -298,6 +298,13 @@ class TodoListSearchCard extends HTMLElement {
           font-weight: 500;
           color: var(--ha-card-header-color, var(--primary-text-color));
         }
+        /* Titel und Suchfeld sind optional (title/hide_search). Wenn
+           beide fehlen, braucht das jeweils erste sichtbare Element
+           trotzdem etwas Abstand zum oberen Kartenrand. */
+        #room-filter:first-child,
+        #active-section:first-child {
+          padding-top: 16px;
+        }
         .row {
           display: flex;
           align-items: center;
@@ -329,6 +336,17 @@ class TodoListSearchCard extends HTMLElement {
           flex-wrap: wrap;
           gap: 6px;
           padding: 0 16px 8px;
+        }
+        /* Raum-Zeile optisch von der Etagen-Zeile absetzen: leicht
+           eingerückt und in einer dezenten Fläche, damit auf kleinen
+           Bildschirmen (mehrzeilig umbrechende Chips) klar bleibt,
+           was zusammengehört. */
+        .chip-row.rooms {
+          margin: 0 16px 8px 28px;
+          padding: 6px 8px;
+          background: var(--secondary-background-color, rgba(127, 127, 127, 0.08));
+          border: 1px solid var(--divider-color, #ccc);
+          border-radius: 10px;
         }
         .chip {
           border: 1px solid var(--divider-color, #ccc);
@@ -501,7 +519,7 @@ class TodoListSearchCard extends HTMLElement {
       </div>
       ${
         currentFloor
-          ? `<div class="chip-row">
+          ? `<div class="chip-row rooms">
               <button type="button" class="chip${!this._selectedRoomCode ? " active" : ""}" data-room-reset>Alle</button>
               ${roomChips}
             </div>`
