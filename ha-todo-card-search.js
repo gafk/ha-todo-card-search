@@ -22,9 +22,13 @@
  *
  * Konfigurationsoptionen:
  *  - entity            (Pflicht) z.B. todo.putzplan
- *  - title              Kartentitel, Standard: Name der Entität
+ *  - title              Kartentitel, Standard leer (kein Titel, kein
+ *                        Platz dafür wird reserviert)
  *  - display_order       none | alpha_asc | alpha_desc | duedate_asc | duedate_desc
  *  - hide_completed       true/false, Standard false
+ *  - hide_search         Suchfeld ausblenden, true/false, Standard false
+ *                         (z.B. wenn nur der Etagen-/Raum-Filter genutzt
+ *                         wird und das Suchfeld nur Platz wegnimmt)
  *  - search_placeholder    Platzhaltertext im Suchfeld
  *  - prefix_color        Farbe für das 2-Buchstaben-Raumkürzel am Anfang
  *                         jedes Titels (z.B. "WZ Staubsaugen"), Standard
@@ -60,7 +64,9 @@
  *    weiterhin über die normale To-do-Karte oder Entwicklerwerkzeuge
  *    -> Aktionen bearbeiten.
  *  - Fälligkeitsdatum wird relativ angezeigt (Heute/Morgen/In 3 Tagen/
- *    Vor 2 Tagen …) via Intl.RelativeTimeFormat.
+ *    Vor 2 Tagen …) via Intl.RelativeTimeFormat, wechselt bei größerem
+ *    Abstand automatisch auf Wochen/Monate/Jahre (z.B. "In 6 Monaten"
+ *    statt "In 173 Tagen").
  *
  * Technischer Hinweis zum Suchfeld: Die Karte baut beim Tippen NICHT
  * die ganze Karte neu auf, sondern nur die Liste darunter (das
@@ -95,13 +101,24 @@ class TodoListSearchCard extends HTMLElement {
       throw new Error("ha-todo-card-search: 'entity' ist erforderlich (z.B. todo.putzplan).");
     }
     this._config = {
+      title: "",
       display_order: "none",
       hide_completed: false,
+      hide_search: false,
       search_placeholder: "Suchen…",
       prefix_color: "#ffab00",
       floors: [],
       ...config,
     };
+    // Hülle direkt neu aufbauen, damit Config-Änderungen (Titel,
+    // Suchfeld-Sichtbarkeit, Farbe, …) im Editor-Vorschaubild sofort
+    // sichtbar sind. Beim allerersten setConfig() ist this._hass noch
+    // nicht gesetzt – der erste Aufbau passiert dann über den
+    // hass-Setter unten.
+    if (this._hass) {
+      this._renderShell();
+      this._updateList();
+    }
   }
 
   static getStubConfig() {
@@ -118,26 +135,9 @@ class TodoListSearchCard extends HTMLElement {
 
   set hass(hass) {
     const hadHass = !!this._hass;
-    const oldName =
-      hadHass && this._config
-        ? this._hass.states[this._config.entity]?.attributes?.friendly_name
-        : undefined;
     this._hass = hass;
-
     if (!hadHass) {
       this._subscribe();
-      this._renderShell();
-      this._updateList();
-      return;
-    }
-
-    // Nur bei geändertem Kartentitel die Hülle neu bauen. Die Aufgaben
-    // selbst kommen über das eigene Abo (siehe unten) und laufen über
-    // _updateList(), ohne das Suchfeld anzufassen.
-    const newName = this._config
-      ? hass.states[this._config.entity]?.attributes?.friendly_name
-      : undefined;
-    if (oldName !== newName) {
       this._renderShell();
       this._updateList();
     }
@@ -230,9 +230,25 @@ class TodoListSearchCard extends HTMLElement {
     const dueDay = new Date(d);
     dueDay.setHours(0, 0, 0, 0);
     const diffDays = Math.round((dueDay - today) / 86400000);
-    const label = TodoListSearchCard._rtf.format(diffDays, "day");
+    const { value, unit } = this._relativeUnit(diffDays);
+    const label = TodoListSearchCard._rtf.format(value, unit);
     const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
     return { label: capitalized, overdue: diffDays < 0 };
+  }
+
+  // Wählt eine gut lesbare Einheit statt immer stur in Tagen zu
+  // rechnen – "in 6 Monaten" ist verständlicher als "in 173 Tagen".
+  // Kaskadiert Tage -> Wochen (< 5) -> Monate (< 12) -> Jahre.
+  _relativeUnit(diffDays) {
+    if (Math.abs(diffDays) < 7) return { value: diffDays, unit: "day" };
+
+    const weeks = Math.round(diffDays / 7);
+    if (Math.abs(weeks) < 5) return { value: weeks, unit: "week" };
+
+    const months = Math.round(diffDays / 30);
+    if (Math.abs(months) < 12) return { value: months, unit: "month" };
+
+    return { value: Math.round(diffDays / 365), unit: "year" };
   }
 
   _escape(str) {
@@ -271,13 +287,7 @@ class TodoListSearchCard extends HTMLElement {
   _renderShell() {
     if (!this._hass || !this._config) return;
 
-    const stateObj = this._hass.states[this._config.entity];
-    const title =
-      this._config.title !== undefined
-        ? this._config.title
-        : stateObj
-        ? stateObj.attributes.friendly_name
-        : this._config.entity;
+    const title = this._config.title || "";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -376,11 +386,15 @@ class TodoListSearchCard extends HTMLElement {
         }
       </style>
       <ha-card>
-        <div class="header">${this._escape(title)}</div>
-        <div class="row">
-          <ha-icon icon="mdi:magnify"></ha-icon>
-          <input id="search" type="text" placeholder="${this._escape(this._config.search_placeholder)}" />
-        </div>
+        ${title ? `<div class="header">${this._escape(title)}</div>` : ""}
+        ${
+          this._config.hide_search
+            ? ""
+            : `<div class="row">
+                <ha-icon icon="mdi:magnify"></ha-icon>
+                <input id="search" type="text" placeholder="${this._escape(this._config.search_placeholder)}" />
+              </div>`
+        }
         <div id="room-filter"></div>
         <div id="active-section"></div>
         <div id="completed-section"></div>
@@ -557,6 +571,7 @@ const TODO_CARD_SEARCH_LABELS = {
   title: "Titel",
   display_order: "Sortierung",
   hide_completed: "Erledigte dauerhaft ausblenden",
+  hide_search: "Suchfeld ausblenden",
   search_placeholder: "Platzhaltertext Suchfeld",
   prefix_color: "Farbe für Raum-Präfixe",
 };
@@ -600,6 +615,7 @@ class TodoListSearchCardEditor extends HTMLElement {
         },
       },
       { name: "hide_completed", selector: { boolean: {} } },
+      { name: "hide_search", selector: { boolean: {} } },
       { name: "search_placeholder", selector: { text: {} } },
       { name: "prefix_color", selector: { text: {} } },
     ];

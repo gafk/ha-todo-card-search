@@ -8,7 +8,7 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
 - Live-Suche/Filter nach Titel und Beschreibung
 - Live-Updates über WebSocket-Abonnement (kein Neuladen nötig)
 - Sortierung nach Name oder Fälligkeitsdatum
-- Relative Fälligkeitsanzeige (Heute / Morgen / In 3 Tagen / Vor 2 Tagen …)
+- Relative Fälligkeitsanzeige (Heute / Morgen / In 3 Tagen …), wechselt bei größerem Abstand automatisch auf Wochen/Monate/Jahre (z.B. „In 6 Monaten" statt „In 173 Tagen")
 - Farbige 2-Buchstaben-Raum-Präfixe (z.B. `WZ`, `KU`, `BA`)
 - Etagen-/Raum-Filter als Chips (Etage wählen → zugehörige Räume, optional weiter eingrenzen)
 - Abschnitt „Erledigt" ein-/ausklappbar
@@ -50,9 +50,10 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
 | Option               | Typ     | Pflicht | Standard      | Beschreibung                                                      |
 |----------------------|---------|---------|---------------|-------------------------------------------------------------------|
 | `entity`             | string  | ✅       | –             | To-do-Listen-Entität, z.B. `todo.putzplan`                       |
-| `title`              | string  | ❌       | Entitätsname  | Eigener Kartentitel                                               |
+| `title`              | string  | ❌       | leer          | Eigener Kartentitel; leer/nicht gesetzt = kein Titel, keine Kopfzeile |
 | `display_order`      | string  | ❌       | `none`        | `none` \| `alpha_asc` \| `alpha_desc` \| `duedate_asc` \| `duedate_desc` |
 | `hide_completed`     | boolean | ❌       | `false`       | Erledigte Aufgaben dauerhaft ausblenden                          |
+| `hide_search`        | boolean | ❌       | `false`       | Suchfeld ausblenden (z.B. wenn nur der Etagen-/Raum-Filter genutzt wird) |
 | `search_placeholder` | string  | ❌       | `Suchen…`     | Platzhaltertext im Suchfeld                                      |
 | `prefix_color`       | string  | ❌       | `#ffab00`     | Farbe für Raum-Präfixe (CSS-Farbe oder HA-Variable)              |
 | `floors`             | list    | ❌       | `[]`          | Etagen-/Raum-Filter, siehe [Etagen- und Raum-Filter](#etagen--und-raum-filter). Nur per YAML, kein Feld im visuellen Editor |
