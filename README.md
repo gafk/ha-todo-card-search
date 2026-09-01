@@ -11,6 +11,7 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
 - Relative Fälligkeitsanzeige (Heute / Morgen / In 3 Tagen / Vor 2 Tagen …)
 - Farbige 2-Buchstaben-Raum-Präfixe (z.B. `WZ`, `KU`, `BA`)
 - Abschnitt „Erledigt" ein-/ausklappbar
+- Visueller Karten-Editor (GUI) zusätzlich zu YAML
 - Vanilla JavaScript – kein Build-Schritt erforderlich
 
 ## Installation
@@ -24,7 +25,7 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
    url: /local/ha-todo-card-search.js
    type: module
    ```
-4. Karte im Dashboard einbinden:
+4. Karte im Dashboard einbinden – entweder über den visuellen Editor ("Karte hinzufügen" → "To-do-Liste mit Suche") oder per YAML:
    ```yaml
    type: custom:ha-todo-card-search
    entity: todo.putzplan
@@ -37,7 +38,7 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
 3. URL `https://github.com/gafk/ha-todo-card-search` eingeben, Kategorie **Dashboard** wählen → **Hinzufügen**.
 4. Das Repository erscheint jetzt in der HACS-Liste. Auf **Herunterladen** klicken.
 5. Home Assistant neu starten (oder Lovelace-Ressourcen neu laden).
-6. Karte im Dashboard einbinden:
+6. Karte im Dashboard einbinden – entweder über den visuellen Editor ("Karte hinzufügen" → "To-do-Liste mit Suche") oder per YAML:
    ```yaml
    type: custom:ha-todo-card-search
    entity: todo.putzplan

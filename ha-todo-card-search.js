@@ -13,7 +13,8 @@
  *  2. Einstellungen -> Dashboards -> Rechts oben "..." -> Ressourcen
  *     -> Ressource hinzufügen -> URL: /local/todo-list-search-card.js
  *     -> Typ: JavaScript-Modul.
- *  3. Karte einbinden, z.B.:
+ *  3. Karte einbinden, entweder über den visuellen Editor (Karte
+ *     hinzufügen -> "To-do-Liste mit Suche") oder per YAML, z.B.:
  *       type: custom:todo-list-search-card
  *       entity: todo.putzplan
  *       display_order: duedate_asc
@@ -80,6 +81,10 @@ class TodoListSearchCard extends HTMLElement {
 
   static getStubConfig() {
     return { entity: "todo.putzplan" };
+  }
+
+  static getConfigElement() {
+    return document.createElement("ha-todo-card-search-editor");
   }
 
   getCardSize() {
@@ -389,7 +394,93 @@ class TodoListSearchCard extends HTMLElement {
   }
 }
 
+/**
+ * Visueller Editor für die Karte (Lovelace "Visuell bearbeiten"-Tab).
+ * Nutzt das von Home Assistant global bereitgestellte <ha-form>, damit
+ * kein zusätzlicher Build-Schritt/Import nötig ist – ha-form ist im
+ * Frontend jeder HA-Instanz bereits registriert, sobald irgendeine
+ * Karte oder Einstellungsseite es einmal geladen hat.
+ */
+const TODO_CARD_SEARCH_LABELS = {
+  entity: "Entität",
+  title: "Titel",
+  display_order: "Sortierung",
+  hide_completed: "Erledigte dauerhaft ausblenden",
+  search_placeholder: "Platzhaltertext Suchfeld",
+  prefix_color: "Farbe für Raum-Präfixe",
+};
+
+function todoCardSearchComputeLabel(schema) {
+  return TODO_CARD_SEARCH_LABELS[schema.name] || schema.name;
+}
+
+class TodoListSearchCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config;
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  connectedCallback() {
+    this._render();
+  }
+
+  get _schema() {
+    return [
+      { name: "entity", required: true, selector: { entity: { domain: "todo" } } },
+      { name: "title", selector: { text: {} } },
+      {
+        name: "display_order",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "none", label: "Keine" },
+              { value: "alpha_asc", label: "Alphabetisch (A-Z)" },
+              { value: "alpha_desc", label: "Alphabetisch (Z-A)" },
+              { value: "duedate_asc", label: "Fälligkeit (aufsteigend)" },
+              { value: "duedate_desc", label: "Fälligkeit (absteigend)" },
+            ],
+          },
+        },
+      },
+      { name: "hide_completed", selector: { boolean: {} } },
+      { name: "search_placeholder", selector: { text: {} } },
+      { name: "prefix_color", selector: { text: {} } },
+    ];
+  }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+
+    if (!this._form) {
+      this._form = document.createElement("ha-form");
+      this._form.addEventListener("value-changed", (ev) => {
+        ev.stopPropagation();
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            detail: { config: ev.detail.value },
+            bubbles: true,
+            composed: true,
+          })
+        );
+      });
+      this.appendChild(this._form);
+    }
+
+    this._form.hass = this._hass;
+    this._form.data = this._config;
+    this._form.schema = this._schema;
+    this._form.computeLabel = todoCardSearchComputeLabel;
+  }
+}
+
 customElements.define("ha-todo-card-search", TodoListSearchCard);
+customElements.define("ha-todo-card-search-editor", TodoListSearchCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
