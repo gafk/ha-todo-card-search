@@ -32,7 +32,16 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
 
 ### HACS
 
-> HACS-Unterstützung folgt in Kürze.
+1. HACS in Home Assistant öffnen.
+2. Oben rechts auf die drei Punkte klicken → **Benutzerdefinierte Repositories**.
+3. URL `https://github.com/gafk/ha-todo-card-search` eingeben, Kategorie **Dashboard** wählen → **Hinzufügen**.
+4. Das Repository erscheint jetzt in der HACS-Liste. Auf **Herunterladen** klicken.
+5. Home Assistant neu starten (oder Lovelace-Ressourcen neu laden).
+6. Karte im Dashboard einbinden:
+   ```yaml
+   type: custom:ha-todo-card-search
+   entity: todo.putzplan
+   ```
 
 ## Konfiguration
 
