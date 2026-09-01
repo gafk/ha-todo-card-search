@@ -79,21 +79,24 @@ Optional lässt sich oberhalb der Liste ein Chip-Filter für Etagen und Räume e
 type: custom:ha-todo-card-search
 entity: todo.putzplan
 floors:
-  - floor: "EG"
+  - code: "EG"
+    label: "Erdgeschoss"
     rooms:
       - { code: "WZ", label: "Wohnzimmer" }
       - { code: "KU", label: "Küche" }
-  - floor: "OG"
+  - code: "OG"
+    label: "Obergeschoss"
     rooms:
       - { code: "SZ", label: "Schlafzimmer" }
       - { code: "KZ", label: "Kinderzimmer" }
 ```
 
-- Klick auf eine Etage filtert auf alle ihre Räume und blendet darunter die Raum-Chips dieser Etage ein.
-- Klick auf einen Raum-Chip grenzt weiter auf genau diesen Raum ein; erneuter Klick springt zurück auf die ganze Etage.
+- Jede Etage hat wie ein Raum ein 2-Buchstaben-Kürzel (`code`) und einen Anzeigenamen (`label`); die Chips zeigen das `label`.
+- Klick auf eine Etage filtert auf alle ihre Räume **und** auf Aufgaben mit dem Etagen-Kürzel selbst (z.B. `EG Lüften` für etagenweite Aufgaben ohne konkreten Raum), und blendet darunter die Raum-Chips dieser Etage ein.
+- Klick auf einen Raum-Chip grenzt weiter auf genau diesen Raum ein – etagenweite Aufgaben ohne Raumbezug verschwinden dann wieder; erneuter Klick springt zurück auf die ganze Etage (inkl. etagenweiter Aufgaben).
 - „Alle" setzt den Filter zurück.
 - Wird mit der Freitextsuche kombiniert (beide Bedingungen müssen zutreffen).
-- Aufgaben ohne erkanntes Raum-Präfix werden ausgeblendet, sobald ein Etagen- oder Raum-Filter aktiv ist.
+- Aufgaben ohne erkanntes Raum-/Etagen-Präfix werden ausgeblendet, sobald ein Etagen- oder Raum-Filter aktiv ist.
 - Ohne `floors`-Konfiguration bleibt die Karte unverändert (kein Filter-Chip wird angezeigt).
 
 ## Einschränkungen

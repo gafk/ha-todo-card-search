@@ -33,17 +33,24 @@
  *                        Editor): Etagen/Raum-Filter als klickbare Chips
  *                        oberhalb der Liste, z.B.:
  *                          floors:
- *                            - floor: "EG"
+ *                            - code: "EG"
+ *                              label: "Erdgeschoss"
  *                              rooms:
  *                                - { code: "WZ", label: "Wohnzimmer" }
  *                                - { code: "KU", label: "Küche" }
- *                            - floor: "OG"
+ *                            - code: "OG"
+ *                              label: "Obergeschoss"
  *                              rooms:
  *                                - { code: "SZ", label: "Schlafzimmer" }
  *                        Klick auf eine Etage filtert auf alle ihre
- *                        Räume, Klick auf einen Raum-Chip auf genau
- *                        diesen. Wird mit der Freitextsuche kombiniert
- *                        (beides muss zutreffen).
+ *                        Räume UND auf das Etagen-Kürzel selbst (für
+ *                        etagenweite Aufgaben wie "EG Lüften" ohne
+ *                        Raumbezug). Klick auf einen Raum-Chip grenzt
+ *                        weiter auf genau diesen Raum ein – etagenweite
+ *                        Aufgaben verschwinden dann wieder, bis wieder
+ *                        nur die Etage (ohne Raum) gewählt ist. Wird
+ *                        mit der Freitextsuche kombiniert (beides muss
+ *                        zutreffen).
  *
  * Einschränkungen (bewusst minimal gehalten):
  *  - Kein Eingabefeld zum Hinzufügen neuer Aufgaben – dafür weiterhin
@@ -186,12 +193,13 @@ class TodoListSearchCard extends HTMLElement {
 
   // null = kein Etagen-/Raum-Filter aktiv. Sonst die Liste der Raum-
   // Kürzel, die aktuell durchgelassen werden (ein einzelnes bei
-  // gewähltem Raum, alle Räume der Etage bei nur gewählter Etage).
+  // gewähltem Raum, sonst bei nur gewählter Etage deren eigenes Kürzel
+  // – für etagenweite Aufgaben wie "EG Lüften" – plus alle ihre Räume).
   _activeRoomCodes() {
     if (this._selectedRoomCode) return [this._selectedRoomCode];
     if (this._selectedFloor) {
-      const floor = (this._config.floors || []).find((f) => f.floor === this._selectedFloor);
-      return floor ? (floor.rooms || []).map((r) => r.code) : [];
+      const floor = (this._config.floors || []).find((f) => f.code === this._selectedFloor);
+      return floor ? [floor.code, ...(floor.rooms || []).map((r) => r.code)] : [];
     }
     return null;
   }
@@ -451,12 +459,12 @@ class TodoListSearchCard extends HTMLElement {
 
     const floorChips = floors
       .map((f) => {
-        const active = this._selectedFloor === f.floor;
-        return `<button type="button" class="chip${active ? " active" : ""}" data-floor="${this._escape(f.floor)}">${this._escape(f.floor)}</button>`;
+        const active = this._selectedFloor === f.code;
+        return `<button type="button" class="chip${active ? " active" : ""}" data-floor="${this._escape(f.code)}">${this._escape(f.label || f.code)}</button>`;
       })
       .join("");
 
-    const currentFloor = floors.find((f) => f.floor === this._selectedFloor);
+    const currentFloor = floors.find((f) => f.code === this._selectedFloor);
     const roomChips = currentFloor
       ? (currentFloor.rooms || [])
           .map((r) => {
