@@ -26,7 +26,7 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
    ```
 4. Karte im Dashboard einbinden:
    ```yaml
-   type: custom:todo-list-search-card
+   type: custom:ha-todo-card-search
    entity: todo.putzplan
    ```
 
@@ -48,7 +48,7 @@ Eine minimalistische [Home Assistant](https://www.home-assistant.io/) Lovelace-K
 ### Beispiel
 
 ```yaml
-type: custom:todo-list-search-card
+type: custom:ha-todo-card-search
 entity: todo.putzplan
 display_order: duedate_asc
 search_placeholder: "Raum suchen…"

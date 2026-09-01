@@ -67,7 +67,7 @@ class TodoListSearchCard extends HTMLElement {
 
   setConfig(config) {
     if (!config || !config.entity) {
-      throw new Error("todo-list-search-card: 'entity' ist erforderlich (z.B. todo.putzplan).");
+      throw new Error("ha-todo-card-search: 'entity' ist erforderlich (z.B. todo.putzplan).");
     }
     this._config = {
       display_order: "none",
@@ -389,11 +389,11 @@ class TodoListSearchCard extends HTMLElement {
   }
 }
 
-customElements.define("todo-list-search-card", TodoListSearchCard);
+customElements.define("ha-todo-card-search", TodoListSearchCard);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "todo-list-search-card",
+  type: "ha-todo-card-search",
   name: "To-do-Liste mit Suche",
   description: "Minimalistische To-do-Listen-Karte mit Suchfeld zum Filtern (z.B. nach Raum-Präfix).",
 });
